@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integrated Budget & Net Worth Growth Model (v8 Web App)</title>
+    <!-- Chart.js for visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --navy-header: #1e293b;
+            --section-header: #334155;
+            --input-bg: #eff6ff;
+            --calc-bg: #f8fafc;
+            --total-bg: #e2e8f0;
+            --border-gray: #cbd5e1;
+            --accent-blue: #0284c7;
+            --text-color: #0f172a;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--navy-header);
+            color: #ffffff;
+            padding: 25px 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            color: #94a3b8;
+            font-size: 0.95em;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            background-color: var(--section-header);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 14px 20px;
+            color: #cbd5e1;
+            background: none;
+            border: none;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            color: #ffffff;
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .nav-tab.active {
+            color: #ffffff;
+            background-color: #ffffff;
+            color: var(--navy-header);
+            border-bottom: 3px solid var(--accent-blue);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Section Panels & Cards */
+        .section-title {
+            background-color: var(--section-header);
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            margin-top: 30px;
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.88em;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-color);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 0.95em;
+            background-color: var(--input-bg);
+        }
+
+        .form-group .note {
+            font-size: 0.8em;
+            color: #64748b;
+            font-style: italic;
+            margin-top: 3px;
+        }
+
+        /* Data Tables */
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid var(--border-gray);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88em;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: var(--navy-header);
+            color: #ffffff;
+            padding: 10px 12px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 8px 12px;
+            border: 1px solid var(--border-gray);
+            text-align: right;
+        }
+
+        td.text-left { text-align: left; }
+        td.text-center { text-align: center; }
+
+        tr:nth-child(even) { background-color: #f8fafc; }
+        tr.total-row { background-color: var(--total-bg); font-weight: bold; }
+        tr.subtotal-row { background-color: #f1f5f9; font-weight: bold; }
+
+        /* KPI Summary Cards */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .kpi-card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 5px solid var(--accent-blue);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            border-top: 1px solid var(--border-gray);
+            border-right: 1px solid var(--border-gray);
+            border-bottom: 1px solid var(--border-gray);
+        }
+
+        .kpi-card .kpi-title {
+            font-size: 0.85em;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .kpi-card .kpi-value {
+            font-size: 1.6em;
+            font-weight: 700;
+            color: var(--navy-header);
+            margin-top: 8px;
+        }
+
+        /* Chart styling */
+        .chart-card {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-gray);
+            height: 500px;
+        }
+
+        .btn-calc {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background-color: var(--navy-header);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 25px;
+        }
+
+        .btn-calc:hover {
+            background-color: var(--section-header);
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2, .grid-3, .grid-4, .kpi-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Personal Financial Model: 70-Year Net Worth & Budget Engine</h1>
+        <p>Full 1:1 Browser Engine based on Integrated Budget & Net Worth Growth Model v8</p>
+    </header>
+
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('tab-summary')">1. NPV & Summary</button>
+        <button class="nav-tab" onclick="switchTab('tab-budget')">2. Itemized Budget Inputs</button>
+        <button class="nav-tab" onclick="switchTab('tab-cashflow')">3. 70-Year Cash Flow Schedule</button>
+        <button class="nav-tab" onclick="switchTab('tab-assetgrowth')">4. 70-Year Asset Growth Schedule</button>
+        <button class="nav-tab" onclick="switchTab('tab-chart')">5. Trajectory Analytics & Chart</button>
+    </div>
+
+    <!-- ==================== TAB 1: NPV & SUMMARY CONTROL ==================== -->
+    <div id="tab-summary" class="tab-content active">
+        
+        <div class="kpi-container">
+            <div class="kpi-card" style="border-left-color: #0284c7;">
+                <div class="kpi-title">Marketable Net Worth (Liquid)</div>
+                <div class="kpi-value" id="kpi-marketable-nw">$0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #64748b;">
+                <div class="kpi-title">PV of Pensions & Sovereign Income</div>
+                <div class="kpi-value" id="kpi-pension-pv">$0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #1e293b;">
+                <div class="kpi-title">Total Economic Net Worth</div>
+                <div class="kpi-value" id="kpi-economic-nw">$0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #10b981;">
+                <div class="kpi-title">Guaranteed Pension Share</div>
+                <div class="kpi-value" id="kpi-pension-share">0.0%</div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- Left Column: Assumptions & Balance Sheet -->
+            <div>
+                <div class="section-title">Demographics, Rates & Return Assumptions</div>
+                <div class="card grid-2">
+                    <div class="form-group">
+                        <label>Primary Current Age</label>
+                        <input type="number" id="pAge" value="35">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Retirement Age</label>
+                        <input type="number" id="pRetireAge" value="67">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Life Expectancy</label>
+                        <input type="number" id="pLifeExp" value="85">
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Current Age</label>
+                        <input type="number" id="sAge" value="35">
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Retirement Age</label>
+                        <input type="number" id="sRetireAge" value="67">
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Life Expectancy</label>
+                        <input type="number" id="sLifeExp" value="85">
+                    </div>
+                    <div class="form-group">
+                        <label>Mandatory Drawdown Age (RMD)</label>
+                        <input type="number" id="rmdStartAge" value="73">
+                    </div>
+                    <div class="form-group">
+                        <label>Baseline Inflation Rate (CPI)</label>
+                        <input type="number" id="inflationRate" value="0.025" step="0.001">
+                    </div>
+                    <div class="form-group">
+                        <label>Real Discount Rate (TIPS)</label>
+                        <input type="number" id="realDiscount" value="0.020" step="0.001">
+                    </div>
+                    <div class="form-group">
+                        <label>Nominal Discount Rate (Fixed)</label>
+                        <input type="number" id="nomDiscount" value="0.045" step="0.001">
+                    </div>
+                    <div class="form-group">
+                        <label>Pre-Retire Gross Salary ($)</label>
+                        <input type="number" id="earnedSalary" value="95000" step="1000">
+                    </div>
+                    <div class="form-group">
+                        <label>Effective Income Tax Rate</label>
+                        <input type="number" id="taxRate" value="0.15" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax-Deferred Return Rate</label>
+                        <input type="number" id="tradReturn" value="0.070" step="0.005">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax-Prepaid Return Rate</label>
+                        <input type="number" id="rothReturn" value="0.070" step="0.005">
+                    </div>
+                    <div class="form-group">
+                        <label>Taxable Investment Return Rate</label>
+                        <input type="number" id="taxableReturn" value="0.070" step="0.005">
+                    </div>
+                    <div class="form-group">
+                        <label>Real Estate Appreciation Rate</label>
+                        <input type="number" id="reAppreciation" value="0.030" step="0.005">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Contrib (Tax-Deferred)</label>
+                        <input type="number" id="pContribTrad" value="4000" step="500">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Contrib (Tax-Prepaid)</label>
+                        <input type="number" id="pContribRoth" value="2000" step="500">
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Contrib (Tax-Deferred)</label>
+                        <input type="number" id="sContribTrad" value="3000" step="500">
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Contrib (Tax-Prepaid)</label>
+                        <input type="number" id="sContribRoth" value="1500" step="500">
+                    </div>
+                    <div class="form-group">
+                        <label>Mortgage Payoff Primary Age</label>
+                        <input type="number" id="mortgagePayoffAge" value="70">
+                    </div>
+                    <div class="form-group">
+                        <label>Auto Loan Payoff Primary Age</label>
+                        <input type="number" id="autoPayoffAge" value="45">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Balance Sheet Inputs -->
+            <div>
+                <div class="section-title">Current Marketable Net Worth (Balance Sheet)</div>
+                <div class="card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="text-left">Category</th>
+                                <th>Gross Value ($)</th>
+                                <th>Debt ($)</th>
+                                <th>Net Equity ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-left">Checking Accounts</td>
+                                <td><input type="number" id="bs_chk_val" value="5000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_chk_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_chk_net">$5,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Savings / Money Market / CDs</td>
+                                <td><input type="number" id="bs_sav_val" value="2500" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_sav_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_sav_net">$2,500</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Standard Taxable Investment Accounts</td>
+                                <td><input type="number" id="bs_taxable_val" value="25000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_taxable_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_taxable_net">$25,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Real Estate (Primary Residence)</td>
+                                <td><input type="number" id="bs_re_val" value="500000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_re_debt" value="400000" onchange="recalcAll()"></td>
+                                <td id="bs_re_net">$100,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Primary Tax-Deferred (401k/IRA/RRSP)</td>
+                                <td><input type="number" id="bs_ptrad_val" value="50000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_ptrad_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_ptrad_net">$50,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Primary Tax-Prepaid (Roth/TFSA/ISA)</td>
+                                <td><input type="number" id="bs_proth_val" value="10000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_proth_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_proth_net">$10,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Secondary Tax-Deferred (401k/IRA)</td>
+                                <td><input type="number" id="bs_strad_val" value="30000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_strad_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_strad_net">$30,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Secondary Tax-Prepaid (Roth/TFSA)</td>
+                                <td><input type="number" id="bs_sroth_val" value="8000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_sroth_debt" value="0" onchange="recalcAll()"></td>
+                                <td id="bs_sroth_net">$8,000</td>
+                            </tr>
+                            <tr>
+                                <td class="text-left">Automobiles & Vehicles</td>
+                                <td><input type="number" id="bs_auto_val" value="45000" onchange="recalcAll()"></td>
+                                <td><input type="number" id="bs_auto_debt" value="12000" onchange="recalcAll()"></td>
+                                <td id="bs_auto_net">$33,000</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td class="text-left">Total Marketable Net Worth</td>
+                                <td id="bs_tot_val">$670,500</td>
+                                <td id="bs_tot_debt">$412,000</td>
+                                <td id="bs_tot_net">$258,500</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Guaranteed Income Streams Inputs -->
+        <div class="section-title">3. Guaranteed Income Streams & Present Value Model</div>
+        <div class="card">
+            <table id="pension-table">
+                <thead>
+                    <tr>
+                        <th class="text-left">Benefit Stream Name</th>
+                        <th>Monthly ($)</th>
+                        <th>Claim Age</th>
+                        <th>COLA Protection</th>
+                        <th>Survivor Option?</th>
+                        <th>Survivor %</th>
+                        <th>Discount Used</th>
+                        <th>NPV Today ($)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-left">State / Sovereign Pension (Primary Earner)</td>
+                        <td><input type="number" id="pen1_monthly" value="2800" step="100"></td>
+                        <td><input type="number" id="pen1_age" value="67"></td>
+                        <td>
+                            <select id="pen1_cola">
+                                <option value="Full COLA" selected>Full COLA</option>
+                                <option value="Fixed (No COLA)">Fixed (No COLA)</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen1_surv_opt">
+                                <option value="Yes" selected>Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen1_surv_pct">
+                                <option value="1.0" selected>100%</option>
+                                <option value="0.75">75%</option>
+                                <option value="0.667">66.7%</option>
+                                <option value="0.50">50%</option>
+                                <option value="0.0">0%</option>
+                            </select>
+                        </td>
+                        <td id="pen1_dr">2.0%</td>
+                        <td id="pen1_npv">$0</td>
+                    </tr>
+                    <tr>
+                        <td class="text-left">Employer / Defined Benefit Pension (Primary Earner)</td>
+                        <td><input type="number" id="pen2_monthly" value="1800" step="100"></td>
+                        <td><input type="number" id="pen2_age" value="67"></td>
+                        <td>
+                            <select id="pen2_cola">
+                                <option value="Full COLA">Full COLA</option>
+                                <option value="Fixed (No COLA)" selected>Fixed (No COLA)</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen2_surv_opt">
+                                <option value="Yes" selected>Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen2_surv_pct">
+                                <option value="1.0">100%</option>
+                                <option value="0.75">75%</option>
+                                <option value="0.667">66.7%</option>
+                                <option value="0.50" selected>50%</option>
+                                <option value="0.0">0%</option>
+                            </select>
+                        </td>
+                        <td id="pen2_dr">4.5%</td>
+                        <td id="pen2_npv">$0</td>
+                    </tr>
+                    <tr>
+                        <td class="text-left">State / Sovereign Pension (Secondary Earner)</td>
+                        <td><input type="number" id="pen3_monthly" value="1400" step="100"></td>
+                        <td><input type="number" id="pen3_age" value="67"></td>
+                        <td>
+                            <select id="pen3_cola">
+                                <option value="Full COLA" selected>Full COLA</option>
+                                <option value="Fixed (No COLA)">Fixed (No COLA)</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen3_surv_opt">
+                                <option value="Yes">Yes</option>
+                                <option value="No" selected>No</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen3_surv_pct">
+                                <option value="1.0">100%</option>
+                                <option value="0.50">50%</option>
+                                <option value="0.0" selected>0%</option>
+                            </select>
+                        </td>
+                        <td id="pen3_dr">2.0%</td>
+                        <td id="pen3_npv">$0</td>
+                    </tr>
+                    <tr>
+                        <td class="text-left">Employer / Defined Benefit Pension (Secondary Earner)</td>
+                        <td><input type="number" id="pen4_monthly" value="1000" step="100"></td>
+                        <td><input type="number" id="pen4_age" value="67"></td>
+                        <td>
+                            <select id="pen4_cola">
+                                <option value="Full COLA">Full COLA</option>
+                                <option value="Fixed (No COLA)" selected>Fixed (No COLA)</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen4_surv_opt">
+                                <option value="Yes" selected>Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select id="pen4_surv_pct">
+                                <option value="1.0">100%</option>
+                                <option value="0.50" selected>50%</option>
+                                <option value="0.0">0%</option>
+                            </select>
+                        </td>
+                        <td id="pen4_dr">4.5%</td>
+                        <td id="pen4_npv">$0</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td class="text-left" colspan="7">Total Present Value of Guaranteed Income Streams</td>
+                        <td id="pen_tot_npv">$0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <button class="btn-calc" onclick="recalcAll()">Run Full 70-Year Financial Model</button>
+    </div>
+
+    <!-- ==================== TAB 2: ITEMIZED BUDGET INPUTS ==================== -->
+    <div id="tab-budget" class="tab-content">
+        <div class="section-title">1. Detailed Baseline Itemized Living & Housing Expenses Input (Today's $)</div>
+        <div class="card">
+            <div class="table-responsive">
+                <table id="itemized-budget-table">
+                    <thead>
+                        <tr>
+                            <th class="text-left">Expense Item Name</th>
+                            <th>Monthly Amount ($)</th>
+                            <th>Annual Baseline ($)</th>
+                            <th>Inflation Multiplier (% CPI)</th>
+                            <th>Effective Annual Growth Rate (%)</th>
+                            <th>Term / Expiration (Years)</th>
+                            <th class="text-left">Lifecycle & Expiration Rules</th>
+                        </tr>
+                    </thead>
+                    <tbody id="budget-body">
+                        <!-- Populated dynamically by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TAB 3: 70-YEAR CASH FLOW SCHEDULE ==================== -->
+    <div id="tab-cashflow" class="tab-content">
+        <div class="section-title">2. Year-by-Year Household Inflow, Outflow & Budget Surplus Schedule (70 Years)</div>
+        <div class="card">
+            <div class="table-responsive">
+                <table id="cashflow-schedule-table">
+                    <thead>
+                        <tr id="cf-header-row">
+                            <!-- Headers generated dynamically -->
+                        </tr>
+                    </thead>
+                    <tbody id="cf-body">
+                        <!-- 70 rows generated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TAB 4: 70-YEAR ASSET GROWTH SCHEDULE ==================== -->
+    <div id="tab-assetgrowth" class="tab-content">
+        <div class="section-title">3. Forward Asset Balance Growth, Mandatory Drawdown & Total Net Worth Schedule (70 Years)</div>
+        <div class="card">
+            <div class="table-responsive">
+                <table id="assetgrowth-schedule-table">
+                    <thead>
+                        <tr id="ag-header-row">
+                            <!-- Headers generated dynamically -->
+                        </tr>
+                    </thead>
+                    <tbody id="ag-body">
+                        <!-- 70 rows generated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TAB 5: CHART & ANALYTICS ==================== -->
+    <div id="tab-chart" class="tab-content">
+        <div class="section-title">Projected Future Net Worth Trajectory ($ Today)</div>
+        <div class="chart-card">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- GLOBAL DATA DEFINITIONS MATCHING EXCEL V8 ---
+    const N_YEARS = 70;
+    const START_YEAR = 2026;
+    let mainChartInstance = null;
+
+    // RMD Table (Age 72 to 120)
+    const RMD_TABLE = {
+        72: 27.4, 73: 26.5, 74: 25.5, 75: 24.6, 76: 23.7, 77: 22.9, 78: 22.0, 79: 21.1,
+        80: 20.2, 81: 19.4, 82: 18.5, 83: 17.7, 84: 16.8, 85: 16.0, 86: 15.2, 87: 14.4,
+        88: 13.7, 89: 12.9, 90: 12.2, 91: 11.5, 92: 10.8, 93: 10.1, 94: 9.5, 95: 8.9,
+        96: 8.4, 97: 7.8, 98: 7.3, 99: 6.8, 100: 6.4, 101: 6.0, 102: 5.6, 103: 5.2,
+        104: 4.9, 105: 4.6, 106: 4.3, 107: 4.1, 108: 3.9, 109: 3.7, 110: 3.5, 111: 3.4,
+        112: 3.3, 113: 3.1, 114: 3.0, 115: 2.9, 116: 2.8, 117: 2.7, 118: 2.5, 119: 2.3, 120: 2.0
+    };
+
+    // 22 Itemized Spending Lines Def
+    const BUDGET_ITEMS_DEF = [
+        // Sub-section 1A: Fixed Unindexed Debt
+        { id: "b_mortgage", cat: "Fixed Debt", name: "Primary Residence Mortgage / Rent (P&I)", m_val: 1800, mult: 0.0, term: "Payoff Age", note: "Fixed debt payment; stops at Primary Residence Mortgage Payoff Age" },
+        { id: "b_autoloan", cat: "Fixed Debt", name: "Auto Loan / Lease Payments", m_val: 350, mult: 0.0, term: "Payoff Age", note: "Fixed debt payment; stops at Auto Loan Payoff Age" },
+        
+        // Sub-section 1B: Joint Household Shared
+        { id: "b_proptax", cat: "Shared", name: "Property Taxes (Real Estate Taxes)", m_val: 400, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_homeins", cat: "Shared", name: "Homeowners / Renters Insurance", m_val: 150, mult: 1.1, term: "Ongoing", note: "Inflates above CPI; continues while either earner is alive" },
+        { id: "b_hoa", cat: "Shared", name: "HOA Fees, Property Maintenance & Repairs", m_val: 150, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_util", cat: "Shared", name: "Electricity, Gas & Heating Utilities", m_val: 250, mult: 1.2, term: "Ongoing", note: "Inflates above CPI; continues while either earner is alive" },
+        { id: "b_water", cat: "Shared", name: "Water, Sewer & Trash Services", m_val: 75, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_internet", cat: "Shared", name: "Internet, Mobile Phone & Cable/Streaming", m_val: 100, mult: 0.8, term: "Ongoing", note: "Inflates below CPI; continues while either earner is alive" },
+        { id: "b_groceries", cat: "Shared", name: "Groceries & Household Food Supplies", m_val: 500, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_dining", cat: "Shared", name: "Dining Out, Cafes & Takeout", m_val: 250, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_gasoline", cat: "Shared", name: "Vehicle Gasoline, EV Charging & Maintenance", m_val: 200, mult: 1.1, term: "Ongoing", note: "Inflates above CPI; continues while either earner is alive" },
+        { id: "b_autoins", cat: "Shared", name: "Auto Insurance & Vehicle Registration", m_val: 150, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_term1", cat: "Shared", name: "Term Life Insurance Policy 1", m_val: 100, mult: 0.0, term: 10, note: "Fixed premium; 0% inflation; reverts to $0 after 10 years" },
+        { id: "b_term2", cat: "Shared", name: "Term Life Insurance Policy 2", m_val: 75, mult: 0.0, term: 20, note: "Fixed premium; 0% inflation; reverts to $0 after 20 years" },
+        { id: "b_umbrella", cat: "Shared", name: "Umbrella Insurance & Financial Fees", m_val: 50, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+        { id: "b_buffer", cat: "Shared", name: "Emergency Contingency & Household Buffer", m_val: 300, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; continues while either earner is alive" },
+
+        // Sub-section 1C: Primary Earner Individual
+        { id: "b_p_healthins", cat: "Primary", name: "Primary Earner Health Insurance Premiums", m_val: 200, mult: 1.5, term: "Ongoing", note: "Medical inflation (150% CPI); drops to $0 when Primary Earner dies" },
+        { id: "b_p_medical", cat: "Primary", name: "Primary Earner Out-of-Pocket Medical & Prescriptions", m_val: 150, mult: 1.5, term: "Ongoing", note: "Medical inflation (150% CPI); drops to $0 when Primary Earner dies" },
+        { id: "b_p_personal", cat: "Primary", name: "Primary Earner Personal Care, Clothing & Hobbies", m_val: 150, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; drops to $0 when Primary Earner dies" },
+        { id: "b_p_travel", cat: "Primary", name: "Primary Earner Travel & Discretionary Recreation", m_val: 150, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; drops to $0 when Primary Earner dies" },
+
+        // Sub-section 1D: Secondary Earner Individual
+        { id: "b_s_healthins", cat: "Secondary", name: "Secondary Earner Health Insurance Premiums", m_val: 200, mult: 1.5, term: "Ongoing", note: "Medical inflation (150% CPI); drops to $0 when Secondary Earner dies" },
+        { id: "b_s_medical", cat: "Secondary", name: "Secondary Earner Out-of-Pocket Medical & Prescriptions", m_val: 150, mult: 1.5, term: "Ongoing", note: "Medical inflation (150% CPI); drops to $0 when Secondary Earner dies" },
+        { id: "b_s_personal", cat: "Secondary", name: "Secondary Earner Personal Care, Clothing & Hobbies", m_val: 150, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; drops to $0 when Secondary Earner dies" },
+        { id: "b_s_travel", cat: "Secondary", name: "Secondary Earner Travel & Discretionary Recreation", m_val: 150, mult: 1.0, term: "Ongoing", note: "Inflates at CPI; drops to $0 when Secondary Earner dies" }
+    ];
+
+    // Helper: Currency Formatter
+    const formatCurrency = (val) => {
+        if (isNaN(val) || val === null) return "$0";
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
+    };
+
+    const formatPercent = (val) => {
+        if (isNaN(val) || val === null) return "0.0%";
+        return (val * 100).toFixed(1) + "%";
+    };
+
+    // Switch Navigation Tabs
+    function switchTab(tabId) {
+        document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        event.target.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+
+        if (tabId === 'tab-chart') {
+            renderChart();
+        }
+    }
+
+    // Build Itemized Budget Input Table HTML
+    function buildBudgetTableUI() {
+        const tbody = document.getElementById('budget-body');
+        tbody.innerHTML = '';
+
+        let currentCat = '';
+
+        BUDGET_ITEMS_DEF.forEach((item, index) => {
+            if (item.cat !== currentCat) {
+                currentCat = item.cat;
+                let headerText = '';
+                if (currentCat === 'Fixed Debt') headerText = 'Sub-section 1A: Fixed Unindexed Debt Obligations (0% Inflation)';
+                if (currentCat === 'Shared') headerText = 'Sub-section 1B: Joint Household Shared Operating Expenses (Inflated)';
+                if (currentCat === 'Primary') headerText = 'Sub-section 1C: Primary Earner Individual Personal & Health Expenses';
+                if (currentCat === 'Secondary') headerText = 'Sub-section 1D: Secondary Earner Individual Personal & Health Expenses';
+
+                const trHead = document.createElement('tr');
+                trHead.className = 'subtotal-row';
+                trHead.innerHTML = `<td colspan="7" class="text-left" style="background-color: var(--total-bg);">${headerText}</td>`;
+                tbody.appendChild(trHead);
+            }
+
+            const tr = document.createElement('tr');
+            
+            let termInputHtml = item.term;
+            if (typeof item.term === 'number') {
+                termInputHtml = `<input type="number" id="${item.id}_term" value="${item.term}" style="width:70px; text-align:center;" onchange="recalcAll()">`;
+            }
+
+            tr.innerHTML = `
+                <td class="text-left">${item.name}</td>
+                <td><input type="number" id="${item.id}_mval" value="${item.m_val}" step="10" style="width:100px; text-align:right;" onchange="recalcAll()"></td>
+                <td id="${item.id}_ann">$${(item.m_val * 12).toLocaleString()}</td>
+                <td><input type="number" id="${item.id}_mult" value="${item.mult}" step="0.1" style="width:80px; text-align:center;" onchange="recalcAll()"></td>
+                <td id="${item.id}_eff">0.00%</td>
+                <td class="text-center">${termInputHtml}</td>
+                <td class="text-left note">${item.note}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Storage for calculated arrays across tabs
+    let modelResults = null;
+
+    // --- MAIN CALCULATION ENGINE ---
+    function recalcAll() {
+        // 1. Gather Demographic & General Assumptions
+        const pAge = parseInt(document.getElementById('pAge').value) || 35;
+        const pRetireAge = parseInt(document.getElementById('pRetireAge').value) || 67;
+        const pLifeExp = parseInt(document.getElementById('pLifeExp').value) || 85;
+
+        const sAge = parseInt(document.getElementById('sAge').value) || 35;
+        const sRetireAge = parseInt(document.getElementById('sRetireAge').value) || 67;
+        const sLifeExp = parseInt(document.getElementById('sLifeExp').value) || 85;
+
+        const rmdStartAge = parseInt(document.getElementById('rmdStartAge').value) || 73;
+        const inflationRate = parseFloat(document.getElementById('inflationRate').value) || 0.025;
+        const realDiscount = parseFloat(document.getElementById('realDiscount').value) || 0.020;
+        const nomDiscount = parseFloat(document.getElementById('nomDiscount').value) || 0.045;
+
+        const earnedSalary = parseFloat(document.getElementById('earnedSalary').value) || 95000;
+        const taxRate = parseFloat(document.getElementById('taxRate').value) || 0.15;
+
+        const tradReturn = parseFloat(document.getElementById('tradReturn').value) || 0.070;
+        const rothReturn = parseFloat(document.getElementById('rothReturn').value) || 0.070;
+        const taxableReturn = parseFloat(document.getElementById('taxableReturn').value) || 0.070;
+        const reAppreciation = parseFloat(document.getElementById('reAppreciation').value) || 0.030;
+
+        const pContribTrad = parseFloat(document.getElementById('pContribTrad').value) || 4000;
+        const pContribRoth = parseFloat(document.getElementById('pContribRoth').value) || 2000;
+        const sContribTrad = parseFloat(document.getElementById('sContribTrad').value) || 3000;
+        const sContribRoth = parseFloat(document.getElementById('sContribRoth').value) || 1500;
+
+        const mortgagePayoffAge = parseInt(document.getElementById('mortgagePayoffAge').value) || 70;
+        const autoPayoffAge = parseInt(document.getElementById('autoPayoffAge').value) || 45;
+
+        // Update Effective Growth Rates on Budget Tab UI
+        BUDGET_ITEMS_DEF.forEach(item => {
+            const multEl = document.getElementById(`${item.id}_mult`);
+            const effEl = document.getElementById(`${item.id}_eff`);
+            const mvalEl = document.getElementById(`${item.id}_mval`);
+            const annEl = document.getElementById(`${item.id}_ann`);
+
+            if (multEl && effEl && mvalEl && annEl) {
+                const mult = parseFloat(multEl.value) || 0;
+                const mval = parseFloat(mvalEl.value) || 0;
+                const effRate = inflationRate * mult;
+
+                effEl.innerText = (effRate * 100).toFixed(2) + "%";
+                annEl.innerText = formatCurrency(mval * 12);
+            }
+        });
+
+        // 2. Gather Balance Sheet Inputs
+        const getBSVal = (id) => parseFloat(document.getElementById(id).value) || 0;
+
+        const bs = {
+            chk_val: getBSVal('bs_chk_val'), chk_debt: getBSVal('bs_chk_debt'),
+            sav_val: getBSVal('bs_sav_val'), sav_debt: getBSVal('bs_sav_debt'),
+            taxable_val: getBSVal('bs_taxable_val'), taxable_debt: getBSVal('bs_taxable_debt'),
+            re_val: getBSVal('bs_re_val'), re_debt: getBSVal('bs_re_debt'),
+            ptrad_val: getBSVal('bs_ptrad_val'), ptrad_debt: getBSVal('bs_ptrad_debt'),
+            proth_val: getBSVal('bs_proth_val'), proth_debt: getBSVal('bs_proth_debt'),
+            strad_val: getBSVal('bs_strad_val'), strad_debt: getBSVal('bs_strad_debt'),
+            sroth_val: getBSVal('bs_sroth_val'), sroth_debt: getBSVal('bs_sroth_debt'),
+            auto_val: getBSVal('bs_auto_val'), auto_debt: getBSVal('bs_auto_debt')
+        };
+
+        // Update BS Net Equity UI
+        document.getElementById('bs_chk_net').innerText = formatCurrency(bs.chk_val - bs.chk_debt);
+        document.getElementById('bs_sav_net').innerText = formatCurrency(bs.sav_val - bs.sav_debt);
+        document.getElementById('bs_taxable_net').innerText = formatCurrency(bs.taxable_val - bs.taxable_debt);
+        document.getElementById('bs_re_net').innerText = formatCurrency(bs.re_val - bs.re_debt);
+        document.getElementById('bs_ptrad_net').innerText = formatCurrency(bs.ptrad_val - bs.ptrad_debt);
+        document.getElementById('bs_proth_net').innerText = formatCurrency(bs.proth_val - bs.proth_debt);
+        document.getElementById('bs_strad_net').innerText = formatCurrency(bs.strad_val - bs.strad_debt);
+        document.getElementById('bs_sroth_net').innerText = formatCurrency(bs.sroth_val - bs.sroth_debt);
+        document.getElementById('bs_auto_net').innerText = formatCurrency(bs.auto_val - bs.auto_debt);
+
+        const bs_tot_val = bs.chk_val + bs.sav_val + bs.taxable_val + bs.re_val + bs.ptrad_val + bs.proth_val + bs.strad_val + bs.sroth_val + bs.auto_val;
+        const bs_tot_debt = bs.chk_debt + bs.sav_debt + bs.taxable_debt + bs.re_debt + bs.ptrad_debt + bs.proth_debt + bs.strad_debt + bs.sroth_debt + bs.auto_debt;
+        const initialMarketableNW = bs_tot_val - bs_tot_debt;
+
+        document.getElementById('bs_tot_val').innerText = formatCurrency(bs_tot_val);
+        document.getElementById('bs_tot_debt').innerText = formatCurrency(bs_tot_debt);
+        document.getElementById('bs_tot_net').innerText = formatCurrency(initialMarketableNW);
+
+        // 3. Gather Pension Inputs
+        const pensions = [
+            {
+                name: "State / Sovereign Pension (Primary)",
+                monthly: parseFloat(document.getElementById('pen1_monthly').value) || 0,
+                claimAge: parseInt(document.getElementById('pen1_age').value) || 67,
+                cola: document.getElementById('pen1_cola').value,
+                survOpt: document.getElementById('pen1_surv_opt').value,
+                survPct: parseFloat(document.getElementById('pen1_surv_pct').value) || 0,
+                drEl: 'pen1_dr', npvEl: 'pen1_npv'
+            },
+            {
+                name: "Employer Pension (Primary)",
+                monthly: parseFloat(document.getElementById('pen2_monthly').value) || 0,
+                claimAge: parseInt(document.getElementById('pen2_age').value) || 67,
+                cola: document.getElementById('pen2_cola').value,
+                survOpt: document.getElementById('pen2_surv_opt').value,
+                survPct: parseFloat(document.getElementById('pen2_surv_pct').value) || 0,
+                drEl: 'pen2_dr', npvEl: 'pen2_npv'
+            },
+            {
+                name: "State / Sovereign Pension (Secondary)",
+                monthly: parseFloat(document.getElementById('pen3_monthly').value) || 0,
+                claimAge: parseInt(document.getElementById('pen3_age').value) || 67,
+                cola: document.getElementById('pen3_cola').value,
+                survOpt: document.getElementById('pen3_surv_opt').value,
+                survPct: parseFloat(document.getElementById('pen3_surv_pct').value) || 0,
+                drEl: 'pen3_dr', npvEl: 'pen3_npv'
+            },
+            {
+                name: "Employer Pension (Secondary)",
+                monthly: parseFloat(document.getElementById('pen4_monthly').value) || 0,
+                claimAge: parseInt(document.getElementById('pen4_age').value) || 67,
+                cola: document.getElementById('pen4_cola').value,
+                survOpt: document.getElementById('pen4_surv_opt').value,
+                survPct: parseFloat(document.getElementById('pen4_surv_pct').value) || 0,
+                drEl: 'pen4_dr', npvEl: 'pen4_npv'
+            }
+        ];
+
+        pensions.forEach(p => {
+            const dr = (p.cola === "Full COLA") ? realDiscount : nomDiscount;
+            document.getElementById(p.drEl).innerText = (dr * 100).toFixed(1) + "%";
+        });
+
+        // 4. GENERATE 70-YEAR SCHEDULES (Iterative Loop matching Tab 2 & Tab 3 of Excel)
+        let cf_schedule = [];
+        let ag_schedule = [];
+
+        // Tab 3 State Memory across years
+        let p_trad_start = bs.ptrad_val - bs.ptrad_debt;
+        let s_trad_start = bs.strad_val - bs.strad_debt;
+        let p_roth_start = bs.proth_val - bs.proth_debt;
+        let s_roth_start = bs.sroth_val - bs.sroth_debt;
+        let taxable_start = bs.taxable_val - bs.taxable_debt;
+
+        for (let i = 0; i < N_YEARS; i++) {
+            const yrIdx = i;
+            const pAgeCur = pAge + i;
+            const sAgeCur = sAge + i;
+            const yearCur = START_YEAR + i;
+
+            // --- TAB 3 MANDATORY DRAWDOWNS & END BALANCES FIRST (since Tab 2 references RMD Draws) ---
+            // Primary Trad RMD
+            let p_rmd = 0;
+            if (pAgeCur >= rmdStartAge) {
+                const divisor = RMD_TABLE[pAgeCur] || 6.4;
+                p_rmd = p_trad_start / divisor;
+            }
+            const p_trad_contrib = (pAgeCur < pRetireAge) ? pContribTrad : 0;
+            const p_trad_end = (p_trad_start - p_rmd + p_trad_contrib) * (1 + tradReturn);
+
+            // Secondary Trad RMD
+            let s_rmd = 0;
+            if (sAgeCur >= rmdStartAge) {
+                const divisor = RMD_TABLE[sAgeCur] || 6.4;
+                s_rmd = s_trad_start / divisor;
+            }
+            const s_trad_contrib = (sAgeCur < sRetireAge) ? sContribTrad : 0;
+            const s_trad_end = (s_trad_start - s_rmd + s_trad_contrib) * (1 + tradReturn);
+
+            // Primary Roth
+            const p_roth_contrib = (pAgeCur < pRetireAge) ? pContribRoth : 0;
+            const p_roth_end = (p_roth_start + p_roth_contrib) * (1 + rothReturn);
+
+            // Secondary Roth
+            const s_roth_contrib = (sAgeCur < sRetireAge) ? sContribRoth : 0;
+            const s_roth_end = (s_roth_start + s_roth_contrib) * (1 + rothReturn);
+
+
+            // --- TAB 2 CASH FLOW & INCOMES ---
+            const salary = (pAgeCur < pRetireAge) ? earnedSalary * Math.pow(1 + inflationRate, i) : 0;
+
+            // State Pension 1 (Primary)
+            let pen1_cf = 0;
+            if (pAgeCur >= pensions[0].claimAge && pAgeCur <= pLifeExp) {
+                const baseAnnual = pensions[0].monthly * 12;
+                const colaMult = (pensions[0].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                pen1_cf = baseAnnual * colaMult;
+            }
+
+            // Employer Pension 1 (Primary)
+            let pen2_cf = 0;
+            if (pAgeCur >= pensions[1].claimAge && pAgeCur <= pLifeExp) {
+                const baseAnnual = pensions[1].monthly * 12;
+                const colaMult = (pensions[1].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                pen2_cf = baseAnnual * colaMult;
+            } else if (pAgeCur > pLifeExp && sAgeCur <= sLifeExp && pensions[1].survOpt === "Yes") {
+                const baseAnnual = pensions[1].monthly * 12 * pensions[1].survPct;
+                const colaMult = (pensions[1].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                pen2_cf = baseAnnual * colaMult;
+            }
+
+            // State Pension 2 (Secondary / Survivor)
+            let pen3_cf = 0;
+            if (pAgeCur <= pLifeExp && sAgeCur >= pensions[2].claimAge && sAgeCur <= sLifeExp) {
+                const baseAnnual = pensions[2].monthly * 12;
+                const colaMult = (pensions[2].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                pen3_cf = baseAnnual * colaMult;
+            } else if (pAgeCur > pLifeExp && sAgeCur <= sLifeExp) {
+                if (pensions[0].survOpt === "Yes") {
+                    const maxMonthly = Math.max(pensions[2].monthly, pensions[0].monthly * pensions[0].survPct);
+                    const colaMult = (pensions[2].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                    pen3_cf = maxMonthly * 12 * colaMult;
+                } else if (sAgeCur >= pensions[2].claimAge) {
+                    const baseAnnual = pensions[2].monthly * 12;
+                    const colaMult = (pensions[2].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                    pen3_cf = baseAnnual * colaMult;
+                }
+            }
+
+            // Employer Pension 2 (Secondary)
+            let pen4_cf = 0;
+            if (sAgeCur >= pensions[3].claimAge && sAgeCur <= sLifeExp) {
+                const baseAnnual = pensions[3].monthly * 12;
+                const colaMult = (pensions[3].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                pen4_cf = baseAnnual * colaMult;
+            } else if (sAgeCur > sLifeExp && pAgeCur <= pLifeExp && pensions[3].survOpt === "Yes") {
+                const baseAnnual = pensions[3].monthly * 12 * pensions[3].survPct;
+                const colaMult = (pensions[3].cola === "Full COLA") ? Math.pow(1 + inflationRate, i) : 1.0;
+                pen4_cf = baseAnnual * colaMult;
+            }
+
+            // Discounted Present Values for Year i
+            const getPV = (cf, cola, dr_choice) => {
+                const dr = (cola === "Full COLA") ? realDiscount : nomDiscount;
+                if (cola === "Full COLA") {
+                    return cf / Math.pow((1 + dr) * (1 + inflationRate), i);
+                } else {
+                    return cf / Math.pow(1 + dr, i);
+                }
+            };
+
+            const pen1_pv = getPV(pen1_cf, pensions[0].cola, realDiscount);
+            const pen2_pv = getPV(pen2_cf, pensions[1].cola, nomDiscount);
+            const pen3_pv = getPV(pen3_cf, pensions[2].cola, realDiscount);
+            const pen4_pv = getPV(pen4_cf, pensions[3].cola, nomDiscount);
+
+            const grossInflow = salary + pen1_cf + pen2_cf + pen3_cf + pen4_cf + p_rmd + s_rmd;
+            const taxes = (salary + pen2_cf + pen4_cf + p_rmd + s_rmd) * taxRate;
+
+            // --- SPENDING LINE COMPUTATION ---
+            let exp_shared = 0;
+            let exp_primary = 0;
+            let exp_secondary = 0;
+            let exp_mortgage = 0;
+            let exp_autoloan = 0;
+
+            if (pAgeCur <= pLifeExp || sAgeCur <= sLifeExp) {
+                BUDGET_ITEMS_DEF.forEach(item => {
+                    const mval = parseFloat(document.getElementById(`${item.id}_mval`).value) || 0;
+                    const mult = parseFloat(document.getElementById(`${item.id}_mult`).value) || 0;
+                    const effRate = inflationRate * mult;
+                    const baseAnnual = mval * 12;
+
+                    // Check expiration
+                    let isExpired = false;
+                    if (typeof item.term === 'number') {
+                        const termInput = parseInt(document.getElementById(`${item.id}_term`).value) || item.term;
+                        if (i >= termInput) isExpired = true;
+                    }
+
+                    if (!isExpired) {
+                        const inflatedCost = baseAnnual * Math.pow(1 + effRate, i);
+
+                        if (item.cat === 'Shared') {
+                            exp_shared += inflatedCost;
+                        } else if (item.cat === 'Primary' && pAgeCur <= pLifeExp) {
+                            exp_primary += inflatedCost;
+                        } else if (item.cat === 'Secondary' && sAgeCur <= sLifeExp) {
+                            exp_secondary += inflatedCost;
+                        }
+                    }
+                });
+
+                // Fixed Debt Payments
+                if (pAgeCur <= mortgagePayoffAge) {
+                    const mval = parseFloat(document.getElementById('b_mortgage_mval').value) || 0;
+                    exp_mortgage = mval * 12;
+                }
+                if (pAgeCur <= autoPayoffAge) {
+                    const mval = parseFloat(document.getElementById('b_autoloan_mval').value) || 0;
+                    exp_autoloan = mval * 12;
+                }
+            }
+
+            const totalLivingExp = exp_shared + exp_primary + exp_secondary + exp_mortgage + exp_autoloan;
+            const preRetireContribs = p_trad_contrib + p_roth_contrib + s_trad_contrib + s_roth_contrib;
+            const netSurplus = grossInflow - taxes - totalLivingExp - preRetireContribs;
+
+            // Store Tab 2 Row
+            cf_schedule.push({
+                yrIdx, pAgeCur, sAgeCur, yearCur, salary, pen1_cf, pen2_cf, pen3_cf, pen4_cf,
+                p_rmd, s_rmd, pen1_pv, pen2_pv, pen3_pv, pen4_pv, grossInflow, taxes,
+                exp_shared, exp_primary, exp_secondary, exp_mortgage, exp_autoloan,
+                totalLivingExp, preRetireContribs, netSurplus
+            });
+
+            // --- FINALIZE TAB 3 ROW ---
+            const taxable_end = Math.max(0, (taxable_start + netSurplus) * (1 + taxableReturn));
+            const re_equity = (bs.re_val - bs.re_debt) * Math.pow(1 + reAppreciation, i);
+
+            const mkt_nw = p_trad_end + s_trad_end + p_roth_end + s_roth_end + taxable_end + re_equity +
+                           (bs.chk_val - bs.chk_debt) + (bs.sav_val - bs.sav_debt) + (bs.auto_val - bs.auto_debt);
+
+            ag_schedule.push({
+                yrIdx, pAgeCur, sAgeCur,
+                p_trad_start, p_rmd, p_trad_end,
+                s_trad_start, s_rmd, s_trad_end,
+                p_roth_start, p_roth_end,
+                s_roth_start, s_roth_end,
+                taxable_start, netSurplus, taxable_end,
+                re_equity, mkt_nw, econ_nw: 0 // Updated below
+            });
+
+            // Pass End Balances to Next Year Start
+            p_trad_start = p_trad_end;
+            s_trad_start = s_trad_end;
+            p_roth_start = p_roth_end;
+            s_roth_start = s_roth_end;
+            taxable_start = taxable_end;
+        }
+
+        // Calculate Dynamic Economic Net Worth (Marketable + Remaining Future Pension PVs)
+        for (let i = 0; i < N_YEARS; i++) {
+            let remainingPensionPVSum = 0;
+            for (let t = i; t < N_YEARS; t++) {
+                remainingPensionPVSum += (cf_schedule[t].pen1_pv + cf_schedule[t].pen2_pv + cf_schedule[t].pen3_pv + cf_schedule[t].pen4_pv);
+            }
+            ag_schedule[i].econ_nw = ag_schedule[i].mkt_nw + remainingPensionPVSum;
+        }
+
+        // Calculate Summary Total NPVs Today
+        const pen1_tot_npv = cf_schedule.reduce((sum, r) => sum + r.pen1_pv, 0);
+        const pen2_tot_npv = cf_schedule.reduce((sum, r) => sum + r.pen2_pv, 0);
+        const pen3_tot_npv = cf_schedule.reduce((sum, r) => sum + r.pen3_pv, 0);
+        const pen4_tot_npv = cf_schedule.reduce((sum, r) => sum + r.pen4_pv, 0);
+        const total_pension_npv = pen1_tot_npv + pen2_tot_npv + pen3_tot_npv + pen4_tot_npv;
+
+        document.getElementById('pen1_npv').innerText = formatCurrency(pen1_tot_npv);
+        document.getElementById('pen2_npv').innerText = formatCurrency(pen2_tot_npv);
+        document.getElementById('pen3_npv').innerText = formatCurrency(pen3_tot_npv);
+        document.getElementById('pen4_npv').innerText = formatCurrency(pen4_tot_npv);
+        document.getElementById('pen_tot_npv').innerText = formatCurrency(total_pension_npv);
+
+        // Update Summary KPI Cards
+        const totalEconomicNW = initialMarketableNW + total_pension_npv;
+        document.getElementById('kpi-marketable-nw').innerText = formatCurrency(initialMarketableNW);
+        document.getElementById('kpi-pension-pv').innerText = formatCurrency(total_pension_npv);
+        document.getElementById('kpi-economic-nw').innerText = formatCurrency(totalEconomicNW);
+
+        const pensionShare = (totalEconomicNW > 0) ? (total_pension_npv / totalEconomicNW) : 0;
+        document.getElementById('kpi-pension-share').innerText = formatPercent(pensionShare);
+
+        // Store global results
+        modelResults = { cf_schedule, ag_schedule };
+
+        // Render Tables
+        renderCashFlowTable(cf_schedule);
+        renderAssetGrowthTable(ag_schedule);
+        renderChart();
+    }
+
+    // Render Tab 3 Table
+    function renderCashFlowTable(cf) {
+        const trHead = document.getElementById('cf-header-row');
+        trHead.innerHTML = `
+            <th>Yr Index</th><th>Primary Age</th><th>Secondary Age</th><th>Year</th>
+            <th>Salary ($)</th><th>State Pen 1 ($)</th><th>Employer Pen 1 ($)</th><th>State Pen 2 ($)</th><th>Employer Pen 2 ($)</th>
+            <th>Primary RMD ($)</th><th>Secondary RMD ($)</th><th>State Pen 1 PV ($)</th><th>Employer Pen 1 PV ($)</th>
+            <th>State Pen 2 PV ($)</th><th>Employer Pen 2 PV ($)</th><th>Gross Inflow ($)</th><th>Taxes ($)</th>
+            <th>Shared Exp ($)</th><th>Primary Exp ($)</th><th>Secondary Exp ($)</th><th>Mortgage ($)</th><th>Auto Loan ($)</th>
+            <th>Total Exp ($)</th><th>Savings ($)</th><th>Net Surplus / (Deficit) ($)</th>
+        `;
+
+        const tbody = document.getElementById('cf-body');
+        tbody.innerHTML = '';
+
+        cf.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center">${r.yrIdx}</td>
+                <td class="text-center">${r.pAgeCur}</td>
+                <td class="text-center">${r.sAgeCur}</td>
+                <td class="text-center">${r.yearCur}</td>
+                <td>${formatCurrency(r.salary)}</td>
+                <td>${formatCurrency(r.pen1_cf)}</td>
+                <td>${formatCurrency(r.pen2_cf)}</td>
+                <td>${formatCurrency(r.pen3_cf)}</td>
+                <td>${formatCurrency(r.pen4_cf)}</td>
+                <td>${formatCurrency(r.p_rmd)}</td>
+                <td>${formatCurrency(r.s_rmd)}</td>
+                <td>${formatCurrency(r.pen1_pv)}</td>
+                <td>${formatCurrency(r.pen2_pv)}</td>
+                <td>${formatCurrency(r.pen3_pv)}</td>
+                <td>${formatCurrency(r.pen4_pv)}</td>
+                <td style="font-weight:bold;">${formatCurrency(r.grossInflow)}</td>
+                <td>${formatCurrency(r.taxes)}</td>
+                <td>${formatCurrency(r.exp_shared)}</td>
+                <td>${formatCurrency(r.exp_primary)}</td>
+                <td>${formatCurrency(r.exp_secondary)}</td>
+                <td>${formatCurrency(r.exp_mortgage)}</td>
+                <td>${formatCurrency(r.exp_autoloan)}</td>
+                <td style="font-weight:bold;">${formatCurrency(r.totalLivingExp)}</td>
+                <td>${formatCurrency(r.preRetireContribs)}</td>
+                <td style="font-weight:bold; color: ${r.netSurplus < 0 ? '#dc2626' : '#0284c7'};">${formatCurrency(r.netSurplus)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Render Tab 4 Table
+    function renderAssetGrowthTable(ag) {
+        const trHead = document.getElementById('ag-header-row');
+        trHead.innerHTML = `
+            <th>Yr Index</th><th>Primary Age</th><th>Secondary Age</th>
+            <th>Primary Tax-Def Start</th><th>Primary RMD</th><th>Primary Tax-Def End</th>
+            <th>Secondary Tax-Def Start</th><th>Secondary RMD</th><th>Secondary Tax-Def End</th>
+            <th>Primary Tax-Prep Start</th><th>Primary Tax-Prep End</th>
+            <th>Secondary Tax-Prep Start</th><th>Secondary Tax-Prep End</th>
+            <th>Taxable Start</th><th>Net Surplus / (Deficit)</th><th>Taxable End</th>
+            <th>Real Estate Equity</th><th>Marketable Net Worth</th><th>Total Economic Net Worth</th>
+        `;
+
+        const tbody = document.getElementById('ag-body');
+        tbody.innerHTML = '';
+
+        ag.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="text-center">${r.yrIdx}</td>
+                <td class="text-center">${r.pAgeCur}</td>
+                <td class="text-center">${r.sAgeCur}</td>
+                <td>${formatCurrency(r.p_trad_start)}</td>
+                <td>${formatCurrency(r.p_rmd)}</td>
+                <td>${formatCurrency(r.p_trad_end)}</td>
+                <td>${formatCurrency(r.s_trad_start)}</td>
+                <td>${formatCurrency(r.s_rmd)}</td>
+                <td>${formatCurrency(r.s_trad_end)}</td>
+                <td>${formatCurrency(r.p_roth_start)}</td>
+                <td>${formatCurrency(r.p_roth_end)}</td>
+                <td>${formatCurrency(r.s_roth_start)}</td>
+                <td>${formatCurrency(r.s_roth_end)}</td>
+                <td>${formatCurrency(r.taxable_start)}</td>
+                <td>${formatCurrency(r.netSurplus)}</td>
+                <td style="font-weight:bold;">${formatCurrency(r.taxable_end)}</td>
+                <td>${formatCurrency(r.re_equity)}</td>
+                <td style="font-weight:bold; background-color: var(--total-bg);">${formatCurrency(r.mkt_nw)}</td>
+                <td style="font-weight:bold; background-color: var(--total-bg);">${formatCurrency(r.econ_nw)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Render Tab 5 Chart
+    function renderChart() {
+        if (!modelResults) return;
+
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const ages = modelResults.ag_schedule.map(r => r.pAgeCur);
+        const mktNWData = modelResults.ag_schedule.map(r => r.mkt_nw);
+        const econNWData = modelResults.ag_schedule.map(r => r.econ_nw);
+
+        if (mainChartInstance) {
+            mainChartInstance.destroy();
+        }
+
+        mainChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ages,
+                datasets: [
+                    {
+                        label: 'Total Economic Net Worth (Marketable Assets + Remaining Pension NPV)',
+                        data: econNWData,
+                        borderColor: '#1e293b',
+                        backgroundColor: 'rgba(30, 41, 59, 0.08)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'Marketable Net Worth (Liquid/Transferable Assets)',
+                        data: mktNWData,
+                        borderColor: '#0284c7',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.2,
+                        pointRadius: 0,
+                        borderDash: [5, 5]
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: '70-Year Net Worth Trajectory Projection ($ Today)', font: { size: 16 } },
+                    legend: { position: 'bottom', labels: { boxWidth: 20, padding: 15 } },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: (ctx) => ctx.dataset.label + ': ' + formatCurrency(ctx.parsed.y)
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Primary Earner Age' }, grid: { display: false } },
+                    y: {
+                        title: { display: true, text: 'Net Worth ($)' },
+                        ticks: {
+                            callback: (val) => {
+                                if (val >= 1000000) return '$' + (val / 1000000).toFixed(1) + 'M';
+                                if (val >= 1000) return '$' + (val / 1000).toFixed(0) + 'k';
+                                return '$' + val;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Attach Event Listeners to inputs
+    window.addEventListener('DOMContentLoaded', () => {
+        buildBudgetTableUI();
+
+        // Attach input listeners to all inputs on summary tab
+        const inputs = document.querySelectorAll('#tab-summary input, #tab-summary select');
+        inputs.forEach(input => {
+            input.addEventListener('change', recalcAll);
+        });
+
+        // Initial Calculation Run
+        recalcAll();
+    });
+
+</script>
+
+</body>
+</html>
